@@ -100,13 +100,28 @@ class Ishocon1::WebApp < Sinatra::Base
   post '/login' do
     authenticate(params['email'], params['password'])
     update_last_login(current_user[:id])
-    redirect '/'
+
+    page = params[:page].to_i || 0
+    products = db.xquery("SELECT * FROM products ORDER BY id DESC LIMIT 50 OFFSET #{page * 50}")
+    cmt_query = <<SQL
+SELECT *
+FROM comments as c
+INNER JOIN users as u
+ON c.user_id = u.id
+WHERE c.product_id = ?
+ORDER BY c.created_at DESC
+LIMIT 5
+SQL
+    cmt_count_query = 'SELECT count(*) as count FROM comments WHERE product_id = ?'
+
+    erb :index, locals: { products: products, cmt_query: cmt_query, cmt_count_query: cmt_count_query }
   end
 
   get '/logout' do
     session[:user_id] = nil
     session.clear
-    redirect '/login'
+
+    erb :login, layout: false, locals: { message: 'ECサイトで爆買いしよう！！！！' }
   end
 
   get '/' do
@@ -155,13 +170,47 @@ SQL
   post '/products/buy/:product_id' do
     authenticated!
     buy_product(params[:product_id], current_user[:id])
-    redirect "/users/#{current_user[:id]}"
+
+    products_query = <<SQL
+SELECT p.id, p.name, p.description, p.image_path, p.price, h.created_at
+FROM histories as h
+LEFT OUTER JOIN products as p
+ON h.product_id = p.id
+WHERE h.user_id = ?
+ORDER BY h.id DESC
+SQL
+    products = db.xquery(products_query, current_user[:id])
+
+    total_pay = 0
+    products.each do |product|
+      total_pay += product[:price]
+    end
+
+    user = db.xquery('SELECT * FROM users WHERE id = ?', current_user[:id]).first
+    erb :mypage, locals: { products: products, user: user, total_pay: total_pay }
   end
 
   post '/comments/:product_id' do
     authenticated!
     create_comment(params[:product_id], current_user[:id], params[:content])
-    redirect "/users/#{current_user[:id]}"
+
+    products_query = <<SQL
+SELECT p.id, p.name, p.description, p.image_path, p.price, h.created_at
+FROM histories as h
+LEFT OUTER JOIN products as p
+ON h.product_id = p.id
+WHERE h.user_id = ?
+ORDER BY h.id DESC
+SQL
+    products = db.xquery(products_query, current_user[:id])
+
+    total_pay = 0
+    products.each do |product|
+      total_pay += product[:price]
+    end
+
+    user = db.xquery('SELECT * FROM users WHERE id = ?', current_user[:id]).first
+    erb :mypage, locals: { products: products, user: user, total_pay: total_pay }
   end
 
   get '/initialize' do
