@@ -12,10 +12,6 @@ end
 class ZaCache
   include Singleton
 
-  def products
-    @products
-  end
-
   def initialize
     @products = {}
   end
@@ -160,36 +156,33 @@ class Ishocon1::WebApp < Sinatra::Base
     redirect '/login'
   end
 
-
-
   get '/' do
     page = params[:page].to_i || 0
     products = db.xquery("SELECT * FROM products ORDER BY id DESC LIMIT 50 OFFSET #{page * 50}")
 
-
-    cmt_query = <<SQL
-SELECT LEFT(c.content, 25) as content, u.name as name
-FROM comments as c
-INNER JOIN users as u
-ON c.user_id = u.id
-WHERE c.product_id = ?
-ORDER BY c.created_at DESC
-LIMIT 5
-SQL
+    cmt_query = <<~SQL
+      SELECT LEFT(c.content, 25) as content, u.name as name
+      FROM comments as c
+      INNER JOIN users as u
+      ON c.user_id = u.id
+      WHERE c.product_id = ?
+      ORDER BY c.created_at DESC
+      LIMIT 5
+    SQL
     cmt_count_query = 'SELECT count(*) as count FROM comments WHERE product_id = ?'
 
     erb :index, locals: { products: products, cmt_query: cmt_query, cmt_count_query: cmt_count_query }
   end
 
   get '/users/:user_id' do
-    products_query = <<SQL
-SELECT p.id, p.name, p.description, p.image_path, p.price, h.created_at
-FROM histories as h
-LEFT OUTER JOIN products as p
-ON h.product_id = p.id
-WHERE h.user_id = ?
-ORDER BY h.id DESC
-SQL
+    products_query = <<~SQL
+      SELECT p.id, p.name, p.description, p.image_path, p.price, h.created_at
+      FROM histories as h
+      LEFT OUTER JOIN products as p
+      ON h.product_id = p.id
+      WHERE h.user_id = ?
+      ORDER BY h.id DESC
+    SQL
     products = db.xquery(products_query, params[:user_id])
 
     total_pay = 0
@@ -203,8 +196,7 @@ SQL
 
   get '/products/:product_id' do
     product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
-    comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
-    erb :product, locals: { product: product, comments: comments }
+    erb :product, locals: { product: product }
   end
 
   post '/products/buy/:product_id' do
