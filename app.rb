@@ -9,15 +9,6 @@ module Ishocon1
   class PermissionDenied < StandardError; end
 end
 
-class ZaCache
-  include Singleton
-
-  def initialize
-    @products = {}
-  end
-
-end
-
 class Ishocon1::WebApp < Sinatra::Base
   session_secret = ENV['ISHOCON1_SESSION_SECRET'] || 'showwin_happy' * 10
   use Rack::Session::Cookie, key: 'rack.session', secret: session_secret
@@ -36,41 +27,6 @@ class Ishocon1::WebApp < Sinatra::Base
           database: ENV['ISHOCON1_DB_NAME'] || 'ishocon1'
         }
       }
-    end
-
-    def load_comments(product_id)
-      cmt_query = <<~SQL
-        SELECT LEFT(c.content, 25) as content, u.name as name
-        FROM comments as c
-        INNER JOIN users as u
-        ON c.user_id = u.id
-        WHERE c.product_id = ?
-        ORDER BY c.created_at DESC
-        LIMIT 5
-      SQL
-      
-      cmt_count_query = <<~SQL
-        SELECT count(*) as count FROM comments WHERE product_id = ?
-      SQL
-
-      result = {}
-
-      if ZaCache.instance.products[product_id].nil?
-        comments = db.xquery(cmt_query, product_id)
-        comments_count = db.xquery(cmt_count_query, product_id).first[:count]
-
-        result = {
-          comments: comments,
-          comments_count: comments_count
-        }
-
-        ZaCache.instance.products[product_id] = result
-      else
-
-        result = ZaCache.instance.products[product_id]
-      end
-
-      return result
     end
 
     def db
@@ -125,8 +81,6 @@ class Ishocon1::WebApp < Sinatra::Base
     def create_comment(product_id, user_id, content)
       db.xquery('INSERT INTO comments (product_id, user_id, content, created_at) VALUES (?, ?, ?, ?)', \
         product_id, user_id, content, time_now_db)
-
-      ZaCache.instance.products[product_id] = nil
     end
   end
 
