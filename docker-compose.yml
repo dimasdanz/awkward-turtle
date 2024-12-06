@@ -50,6 +50,7 @@ services:
 
     command: |-
       sh -c '
+      rm /tmp/unicorn.pid;
       bundle install;
       bundle exec unicorn -c unicorn_config.rb
       '
