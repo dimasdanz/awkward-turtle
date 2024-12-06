@@ -157,15 +157,6 @@ class Ishocon1::WebApp < Sinatra::Base
       product[:id]
     end
 
-    comments = db.xquery('SELECT c.product_id as product_id, LEFT(c.content, 25) as content, u.name as name
-      FROM (SELECT comments.*, row_number() over (partition by product_id order by created_at desc) as seqnum
-            FROM comments
-            WHERE product_id in (?)) c
-      INNER JOIN users as u ON c.user_id = u.id
-      WHERE seqnum <= 5;', product_ids)
-
-    comments_hash = comments.group_by { |comment| comment[:product_id] }
-
     key = "product_#{product_ids.join('_')}"
 
     chash = CaCache.instance.grabb(key)
@@ -176,6 +167,16 @@ class Ishocon1::WebApp < Sinatra::Base
     end
 
     if invalid
+      
+      comments = db.xquery('SELECT c.product_id as product_id, LEFT(c.content, 25) as content, u.name as name
+        FROM (SELECT comments.*, row_number() over (partition by product_id order by created_at desc) as seqnum
+              FROM comments
+              WHERE product_id in (?)) c
+        INNER JOIN users as u ON c.user_id = u.id
+        WHERE seqnum <= 5;', product_ids)
+
+      comments_hash = comments.group_by { |comment| comment[:product_id] }
+
       chash = comments_hash
       CaCache.instance.store(key, chash)
       #puts "MISS"
