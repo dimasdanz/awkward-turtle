@@ -26,6 +26,7 @@ GEM
       async
       async-container (~> 0.16)
     base64 (0.2.0)
+    connection_pool (2.4.1)
     console (1.29.0)
       fiber-annotation
       fiber-local (~> 1.1)
@@ -84,6 +85,10 @@ GEM
     rack-session (2.0.0)
       rack (>= 3.0.0)
     raindrops (0.20.1)
+    redis (5.3.0)
+      redis-client (>= 0.22.0)
+    redis-client (0.22.2)
+      connection_pool
     ruby2_keywords (0.0.5)
     samovar (2.3.0)
       console (~> 1.0)
@@ -109,6 +114,7 @@ DEPENDENCIES
   foreman
   mysql2 (= 0.5.6)
   mysql2-cs-bind
+  redis
   sinatra
   unicorn
 

@@ -40,6 +40,7 @@ services:
   webapp:
     image: ruby
     environment:
+      - REDIS_HOST=redis
       - ISHOCON1_DB_HOST=at_mysql
     ports:
       - "8080:8080"

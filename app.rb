@@ -3,10 +3,40 @@ require 'mysql2'
 require 'mysql2-cs-bind'
 require 'erubis'
 require 'singleton'
+require 'redis'
+require 'yaml'
 
 module Ishocon1
   class AuthenticationError < StandardError; end
   class PermissionDenied < StandardError; end
+end
+
+class CaCache
+  include Singleton
+
+  def grabb(id)
+    obj = redis.get(id)
+    YAML.unsafe_load(obj)[:item]
+  end
+
+  def store(id, hash)
+    redis.set(id, { item: hash }.to_yaml)
+  end
+
+  def delet(id)
+    redis.getdel(id)
+  end
+
+  def clear
+    redis.flushall
+  end
+
+  private
+
+  def redis
+    @redis ||= Redis.new(url: "redis://#{ENV['REDIS_HOST'] || 'localhost'}")
+  end
+
 end
 
 class Ishocon1::WebApp < Sinatra::Base
@@ -73,7 +103,7 @@ class Ishocon1::WebApp < Sinatra::Base
 
     def already_bought?(product_id)
       return false unless current_user
-      count = db.xquery('SELECT count(*) as count FROM histories WHERE product_id = ? AND user_id = ?', \
+      count = db.xquery('SELECT count(id) as count FROM histories WHERE product_id = ? AND user_id = ?', \
                         product_id, current_user[:id]).first[:count]
       count > 0
     end
@@ -114,7 +144,16 @@ class Ishocon1::WebApp < Sinatra::Base
     page = params[:page].to_i || 0
     products = db.xquery("SELECT *, (SELECT COUNT(*) FROM `comments` WHERE `comments`.`product_id` = `products`.`id`) AS `comments_count` FROM products ORDER BY products.id DESC LIMIT 50 OFFSET #{page * 50}")
 
-    product_ids = products.map { |product| product[:id] }
+    invalid = false
+
+    product_ids = products.map do |product|
+      if !CaCache.instance.delet("dirty_#{product[:id]}").nil?
+        invalid = true
+      end
+
+      product[:id]
+    end
+
     comments = db.xquery('SELECT c.product_id as product_id, LEFT(c.content, 25) as content, u.name as name
       FROM (SELECT comments.*, row_number() over (partition by product_id order by created_at desc) as seqnum
             FROM comments
@@ -124,15 +163,33 @@ class Ishocon1::WebApp < Sinatra::Base
 
     comments_hash = comments.group_by { |comment| comment[:product_id] }
 
-    erb :index, locals: { products: products, comments_hash: comments_hash }
+
+    key = "product_#{product_ids.join('_')}"
+
+
+    chash = CaCache.instance.grabb(key)
+
+    # decide if invalid
+
+    if invalid
+      chash = comments_hash
+      CaCache.instance.store(key, chash)
+      puts "MISS"
+    else
+      puts "HIT"
+    end
+
+
+
+
+    erb :index, locals: { products: products, comments_hash: chash }
   end
 
   get '/users/:user_id' do
     products_query = <<~SQL
       SELECT p.id, p.name, p.description, p.image_path, p.price, h.created_at
-      FROM histories as h
-      LEFT OUTER JOIN products as p
-      ON h.product_id = p.id
+        FROM histories as h
+        LEFT OUTER JOIN products as p ON h.product_id = p.id
       WHERE h.user_id = ?
       ORDER BY h.id DESC
     SQL
@@ -161,6 +218,9 @@ class Ishocon1::WebApp < Sinatra::Base
   post '/comments/:product_id' do
     authenticated!
     create_comment(params[:product_id], current_user[:id], params[:content])
+
+    CaCache.instance.store("dirty_#{params[:product_id]}", "yes")
+
     redirect "/users/#{current_user[:id]}"
   end
 
@@ -169,6 +229,7 @@ class Ishocon1::WebApp < Sinatra::Base
     db.query('DELETE FROM products WHERE id > 10000')
     db.query('DELETE FROM comments WHERE id > 200000')
     db.query('DELETE FROM histories WHERE id > 500000')
+    CaCache.instance.clear
     "Finish"
   end
 end
