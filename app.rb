@@ -150,7 +150,7 @@ class Ishocon1::WebApp < Sinatra::Base
 
     product_ids = products.map do |product|
       if !CaCache.instance.delet("dirty_#{product[:id]}").nil?
-        p " #{params[:product_id]} this is diett"
+        #p " #{params[:product_id]} this is diett"
         invalid = true
       end
 
@@ -178,9 +178,9 @@ class Ishocon1::WebApp < Sinatra::Base
     if invalid
       chash = comments_hash
       CaCache.instance.store(key, chash)
-      puts "MISS"
+      #puts "MISS"
     else
-      puts "HIT"
+      #puts "HIT"
     end
 
 
@@ -223,7 +223,7 @@ class Ishocon1::WebApp < Sinatra::Base
     authenticated!
     create_comment(params[:product_id], current_user[:id], params[:content])
 
-    p "dirty_#{params[:product_id]}"
+    #p "dirty_#{params[:product_id]}"
     CaCache.instance.store("dirty_#{params[:product_id]}", "yes")
 
     redirect "/users/#{current_user[:id]}"
