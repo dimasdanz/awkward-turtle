@@ -16,6 +16,8 @@ class CaCache
 
   def grabb(id)
     obj = redis.get(id)
+    return nil if obj.nil?
+
     YAML.unsafe_load(obj)[:item]
   end
 
