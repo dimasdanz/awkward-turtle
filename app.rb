@@ -148,7 +148,7 @@ SQL
 
   get '/products/:product_id' do
     product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
-    comments = db.xquery('SELECT name, LEFT(content, 25) as content FROM comments WHERE product_id = ?', params[:product_id])
+    comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
     erb :product, locals: { product: product, comments: comments }
   end
 
