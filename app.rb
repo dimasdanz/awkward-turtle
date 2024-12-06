@@ -113,7 +113,7 @@ class Ishocon1::WebApp < Sinatra::Base
     page = params[:page].to_i || 0
     products = db.xquery("SELECT * FROM products ORDER BY id DESC LIMIT 50 OFFSET #{page * 50}")
     cmt_query = <<SQL
-SELECT *
+SELECT LEFT(c.content, 25) as content, u.name as name
 FROM comments as c
 INNER JOIN users as u
 ON c.user_id = u.id
@@ -148,13 +148,7 @@ SQL
 
   get '/products/:product_id' do
     product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
-    comments = db.xquery('
-      SELECT LEFT(c.content, 26) as content, u.name as name FROM comments c
-        INNER JOIN users as u ON c.user_id = u.id
-        WHERE c.product_id = ?
-
-
-      ', params[:product_id])
+    comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
     erb :product, locals: { product: product, comments: comments }
   end
 
