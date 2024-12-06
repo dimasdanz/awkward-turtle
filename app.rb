@@ -73,9 +73,9 @@ class Ishocon1::WebApp < Sinatra::Base
 
     def already_bought?(product_id)
       return false unless current_user
-      count = db.xquery('SELECT count(*) as count FROM histories WHERE product_id = ? AND user_id = ?', \
-                        product_id, current_user[:id]).first[:count]
-      count > 0
+      count = db.xquery('SELECT id FROM histories WHERE product_id = ? AND user_id = ? LIMIT 1', \
+                        product_id, current_user[:id]).first
+      count.nil? == false
     end
 
     def create_comment(product_id, user_id, content)
