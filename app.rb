@@ -59,11 +59,11 @@ class Ishocon1::WebApp < Sinatra::Base
     end
 
     def current_user
-      db.xquery('SELECT * FROM users WHERE id = ?', session[:user_id]).first
+      @current_user ||= db.xquery('SELECT * FROM users WHERE id = ?', session[:user_id]).first if session[:user_id]
     end
 
     def update_last_login(user_id)
-      db.xquery('UPDATE users SET last_login = ? WHERE id = ?', time_now_db, user_id)
+      # db.xquery('UPDATE users SET last_login = ? WHERE id = ?', time_now_db, user_id)
     end
 
     def buy_product(product_id, user_id)
