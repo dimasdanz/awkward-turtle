@@ -37,5 +37,22 @@ services:
     networks:
       - kamesan
 
+  webapp:
+    image: ruby
+    environment:
+      - ISHOCON1_DB_HOST=at_mysql
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - ./:/app
+    working_dir: /app
+
+    command: |-
+      bundle install;
+      bundle exec unicorn -c unicorn_config.rb
+    networks:
+      - kamesan
+
 networks:
   kamesan:
