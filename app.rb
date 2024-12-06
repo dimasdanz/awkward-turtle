@@ -19,7 +19,7 @@ class Ishocon1::WebApp < Sinatra::Base
     def config
       @config ||= {
         db: {
-          host: ENV['ISHOCON1_DB_HOST'] || 'localhost',
+          host: ENV['ISHOCON1_DB_HOST'] || 'at_mysql',
           port: ENV['ISHOCON1_DB_PORT'] && ENV['ISHOCON1_DB_PORT'].to_i,
           username: ENV['ISHOCON1_DB_USER'] || 'ishocon',
           password: ENV['ISHOCON1_DB_PASSWORD'] || 'ishocon',
@@ -31,7 +31,7 @@ class Ishocon1::WebApp < Sinatra::Base
     def db
       return Thread.current[:ishocon1_db] if Thread.current[:ishocon1_db]
       client = Mysql2::Client.new(
-        host: config[:db][:host],
+        host: 'at_mysql',
         port: config[:db][:port],
         username: config[:db][:username],
         password: config[:db][:password],
@@ -148,7 +148,7 @@ SQL
 
   get '/products/:product_id' do
     product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
-    comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
+    comments = db.xquery('SELECT name, LEFT(content, 25) as content FROM comments WHERE product_id = ?', params[:product_id])
     erb :product, locals: { product: product, comments: comments }
   end
 

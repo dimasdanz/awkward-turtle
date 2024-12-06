@@ -8,6 +8,8 @@ services:
       MYSQL_DATABASE: ishocon1
     ports:
       - "3306:3306"
+    networks:
+      - kamesan
 
   adminer:
     image: public.ecr.aws/docker/library/adminer:standalone
@@ -16,15 +18,24 @@ services:
       - ADMINER_DEFAULT_SERVER=mysql
     ports:
       - "1234:8080"
+    networks:
+      - kamesan
 
   redis:
     image: public.ecr.aws/docker/library/redis:7.0
     container_name: at_redis
     ports:
       - "6379:6379"
+    networks:
+      - kamesan
 
   redisinsight:
     image: redis/redisinsight
     container_name: at_redisinsight
     ports:
       - "5540:5540"
+    networks:
+      - kamesan
+
+networks:
+  kamesan:
