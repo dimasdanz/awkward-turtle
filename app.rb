@@ -115,13 +115,12 @@ class Ishocon1::WebApp < Sinatra::Base
     products = db.xquery("SELECT *, (SELECT COUNT(*) FROM `comments` WHERE `comments`.`product_id` = `products`.`id`) AS `comments_count` FROM products ORDER BY products.id DESC LIMIT 50 OFFSET #{page * 50}")
 
     product_ids = products.map { |product| product[:id] }
-    comments = db.xquery('select c.product_id as product_id, c.content as content, u.name as name
-      from (select comments.*, row_number() over (partition by product_id order by created_at desc) as seqnum
-            from comments
-            where product_id in (?)
-           ) c
+    comments = db.xquery('SELECT c.product_id as product_id, LEFT(c.content, 25) as content, u.name as name
+      FROM (SELECT comments.*, row_number() over (partition by product_id order by created_at desc) as seqnum
+            FROM comments
+            WHERE product_id in (?)) c
       INNER JOIN users as u ON c.user_id = u.id
-      where seqnum <= 5;', product_ids)
+      WHERE seqnum <= 5;', product_ids)
 
     comments_hash = comments.group_by { |comment| comment[:product_id] }
 
