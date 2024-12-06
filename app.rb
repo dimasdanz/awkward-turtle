@@ -2,10 +2,24 @@ require 'sinatra/base'
 require 'mysql2'
 require 'mysql2-cs-bind'
 require 'erubis'
+require 'singleton'
 
 module Ishocon1
   class AuthenticationError < StandardError; end
   class PermissionDenied < StandardError; end
+end
+
+class ZaCache
+  include Singleton
+
+  def products
+    @products
+  end
+
+  def initialize
+    @products = {}
+  end
+
 end
 
 class Ishocon1::WebApp < Sinatra::Base
@@ -26,6 +40,41 @@ class Ishocon1::WebApp < Sinatra::Base
           database: ENV['ISHOCON1_DB_NAME'] || 'ishocon1'
         }
       }
+    end
+
+    def load_comments(product_id)
+      cmt_query = <<~SQL
+        SELECT LEFT(c.content, 25) as content, u.name as name
+        FROM comments as c
+        INNER JOIN users as u
+        ON c.user_id = u.id
+        WHERE c.product_id = ?
+        ORDER BY c.created_at DESC
+        LIMIT 5
+      SQL
+      
+      cmt_count_query = <<~SQL
+        SELECT count(*) as count FROM comments WHERE product_id = ?
+      SQL
+
+      result = {}
+
+      if ZaCache.instance.products[product_id].nil?
+        comments = db.xquery(cmt_query, product_id)
+        comments_count = db.xquery(cmt_count_query, product_id).first[:count]
+
+        result = {
+          comments: comments,
+          comments_count: comments_count
+        }
+
+        ZaCache.instance.products[product_id] = result
+      else
+
+        result = ZaCache.instance.products[product_id]
+      end
+
+      return result
     end
 
     def db
@@ -109,9 +158,13 @@ class Ishocon1::WebApp < Sinatra::Base
     redirect '/login'
   end
 
+
+
   get '/' do
     page = params[:page].to_i || 0
     products = db.xquery("SELECT * FROM products ORDER BY id DESC LIMIT 50 OFFSET #{page * 50}")
+
+
     cmt_query = <<SQL
 SELECT LEFT(c.content, 25) as content, u.name as name
 FROM comments as c
