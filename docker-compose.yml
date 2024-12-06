@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: public.ecr.aws/docker/library/mysql:8.0
+    container_name: at_mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ishocon1
+    ports:
+      - "3306:3306"
+
+  adminer:
+    image: public.ecr.aws/docker/library/adminer:standalone
+    container_name: at_adminer
+    environment:
+      - ADMINER_DEFAULT_SERVER=mysql
+    ports:
+      - "1234:8080"
+
+  redis:
+    image: public.ecr.aws/docker/library/redis:7.0
+    container_name: at_redis
+    ports:
+      - "6379:6379"
+
+  redisinsight:
+    image: redis/redisinsight
+    container_name: at_redisinsight
+    ports:
+      - "5540:5540"
